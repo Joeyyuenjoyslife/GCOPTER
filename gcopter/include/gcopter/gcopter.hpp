@@ -339,6 +339,7 @@ namespace gcopter
             const double velSqrMax = magnitudeBounds(0) * magnitudeBounds(0);
             const double omgSqrMax = magnitudeBounds(1) * magnitudeBounds(1);
             const double thetaMax = magnitudeBounds(2);
+            const double pitchMax = magnitudeBounds(5);
             const double thrustMean = 0.5 * (magnitudeBounds(3) + magnitudeBounds(4));
             const double thrustRadi = 0.5 * fabs(magnitudeBounds(4) - magnitudeBounds(3));
             const double thrustSqrRadi = thrustRadi * thrustRadi;
@@ -347,12 +348,13 @@ namespace gcopter
             const double weightVel = penaltyWeights(1);
             const double weightOmg = penaltyWeights(2);
             const double weightTheta = penaltyWeights(3);
-            const double weightThrust = penaltyWeights(4);
+            const double weightPitch = penaltyWeights(4);
+            const double weightThrust = penaltyWeights(5);
 
             Eigen::Vector3d pos, vel, acc, jer, sna;
             Eigen::Vector3d totalGradPos, totalGradVel, totalGradAcc, totalGradJer;
             double totalGradPsi, totalGradPsiD;
-            double thr, cos_theta;
+            double thr, cos_theta, pitch, sin_pitch;
             Eigen::Vector4d quat;
             Eigen::Vector3d omg;
             double gradThr;
@@ -365,7 +367,13 @@ namespace gcopter
             Eigen::Vector3d outerNormal;
             int K, L;
             double violaPos, violaVel, violaOmg, violaTheta, violaThrust;
+
+            //Joeyyu: add pitch constraints:
+            double violaPitch, violaPitchPenaD, violaPitchPena;
+
             double violaPosPenaD, violaVelPenaD, violaOmgPenaD, violaThetaPenaD, violaThrustPenaD;
+
+
             double violaPosPena, violaVelPena, violaOmgPena, violaThetaPena, violaThrustPena;
             double node, pena;
 
@@ -399,6 +407,12 @@ namespace gcopter
                     violaOmg = omg.squaredNorm() - omgSqrMax;
                     cos_theta = 1.0 - 2.0 * (quat(1) * quat(1) + quat(2) * quat(2));
                     violaTheta = acos(cos_theta) - thetaMax;
+                    //Joeyyu: Pitch viola
+                    sin_pitch = 2.0*(quat(0)*quat(2)-quat(3)*quat(1));
+                    pitch = asin(sin_pitch);
+                    
+                    violaPitch = pitch*pitch - pitchMax*pitchMax;
+
                     violaThrust = (thr - thrustMean) * (thr - thrustMean) - thrustSqrRadi;
 
                     gradThr = 0.0;
@@ -437,6 +451,18 @@ namespace gcopter
                                     sqrt(1.0 - cos_theta * cos_theta) * 4.0 *
                                     Eigen::Vector4d(0.0, quat(1), quat(2), 0.0);
                         pena += weightTheta * violaThetaPena;
+                    }
+
+                    //Joeyyu: add pitch cost and gradient
+                    if (smoothedL1(violaPitch, smoothFactor, violaPitchPena, violaPitchPenaD))
+                    {
+                        std::cout<<"[Gcopter]:" << " " << "weihtPitch:" << " " << weightPitch<< std::endl;
+                        std::cout<<"[Gcopter]:" << " " << "violaPitchPenaD:" << " " << violaPitchPenaD<< std::endl;
+                        gradQuat += weightPitch * violaPitchPenaD * 2.0 * pitch / 
+                                    sqrt(1.0 - sin_pitch * sin_pitch) * 2.0 * 
+                                    Eigen::Vector4d(quat(2), -quat(3), quat(0), -quat(1));
+                        pena += weightPitch * violaPitchPena;
+                        std::cout<<"[Gcopter]:" << " " << "gradQuat:" << " " << gradQuat.transpose()<< std::endl;
                     }
 
                     if (smoothedL1(violaThrust, smoothFactor, violaThrustPena, violaThrustPenaD))

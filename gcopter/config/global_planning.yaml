@@ -14,7 +14,9 @@ MaxVelMag:                  4.0
 
 MaxBdrMag:                  2.1
 
-MaxTiltAngle:               1.05
+MaxTiltAngle:               0.26
+
+MaxPitch:                   0.26
 
 MinThrust:                  2.0
 
@@ -34,7 +36,7 @@ SpeedEps:                   0.0001
 
 WeightT:                    20.0
 
-ChiVec:                     [1.0e+4, 1.0e+4, 1.0e+4, 1.0e+4, 1.0e+5]
+ChiVec:                     [1.0e+4, 1.0e+4, 1.0e+4, 1.0e+4, 1.0e+4, 1.0e+5]
 
 SmoothingEps:               1.0e-2
 

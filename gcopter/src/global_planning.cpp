@@ -31,6 +31,7 @@ struct Config
     double maxVelMag;
     double maxBdrMag;
     double maxTiltAngle;
+    double maxPitch;
     double minThrust;
     double maxThrust;
     double vehicleMass;
@@ -56,6 +57,7 @@ struct Config
         nh_priv.getParam("MaxVelMag", maxVelMag);
         nh_priv.getParam("MaxBdrMag", maxBdrMag);
         nh_priv.getParam("MaxTiltAngle", maxTiltAngle);
+        nh_priv.getParam("MaxPitch", maxPitch);
         nh_priv.getParam("MinThrust", minThrust);
         nh_priv.getParam("MaxThrust", maxThrust);
         nh_priv.getParam("VehicleMass", vehicleMass);
@@ -180,19 +182,21 @@ public:
                 // physicalParams = [vehicle_mass, gravitational_acceleration, horitonral_drag_coeff,
                 //                   vertical_drag_coeff, parasitic_drag_coeff, speed_smooth_factor]^T
                 // initialize some constraint parameters
-                Eigen::VectorXd magnitudeBounds(5);
-                Eigen::VectorXd penaltyWeights(5);
+                Eigen::VectorXd magnitudeBounds(6);
+                Eigen::VectorXd penaltyWeights(6);
                 Eigen::VectorXd physicalParams(6);
                 magnitudeBounds(0) = config.maxVelMag;
                 magnitudeBounds(1) = config.maxBdrMag;
                 magnitudeBounds(2) = config.maxTiltAngle;
                 magnitudeBounds(3) = config.minThrust;
                 magnitudeBounds(4) = config.maxThrust;
+                magnitudeBounds(5) = config.maxPitch;
                 penaltyWeights(0) = (config.chiVec)[0];
                 penaltyWeights(1) = (config.chiVec)[1];
                 penaltyWeights(2) = (config.chiVec)[2];
                 penaltyWeights(3) = (config.chiVec)[3];
                 penaltyWeights(4) = (config.chiVec)[4];
+                penaltyWeights(5) = (config.chiVec)[5];
                 physicalParams(0) = config.vehicleMass;
                 physicalParams(1) = config.gravAcc;
                 physicalParams(2) = config.horizDrag;
@@ -287,16 +291,34 @@ public:
                 double speed = traj.getVel(delta).norm();
                 double bodyratemag = omg.norm();
                 double tiltangle = acos(1.0 - 2.0 * (quat(1) * quat(1) + quat(2) * quat(2)));
+                //Joeyyu: add the pitch and roll angle
+                double pitchangle = asin(2.0*(quat(0)*quat(2)-quat(3)*quat(1)));
+                double rollangle = atan2(2.0*(quat(0)*quat(3)+quat(1)*quat(2)),1-2.0*(quat(2)*quat(2)+quat(3)*quat(3)));
+                //double tilt_from_pr = acos(cos(pitchangle)*cos(rollangle));
+                //std::cout<<"[Global_planning]:" << " " << "tilt 1:" << " " << tiltangle  
+                //<< " " <<" tilt 1:" <<" " << tilt_from_pr <<std::endl;
+                //std::cout<<"[Global_planning]:" << " " << "tilt angle:" << " " << tiltangle/3.14 * 180.0 << std::endl;
+                std::cout<<"[Global_planning]:" << " " << "pitch angle:" << " " << pitchangle/3.14 * 180.0 << std::endl;
+                //std::cout<<"[Global_planning]:" << " " << "roll angle:" << " " << rollangle/3.14 * 180.0 << std::endl;
                 std_msgs::Float64 speedMsg, thrMsg, tiltMsg, bdrMsg;
+                //Joeyyu: add pitch and roll Msg;
+                std_msgs::Float64 pitchMsg, rollMsg;
+
+
                 speedMsg.data = speed;
                 thrMsg.data = thr;
                 tiltMsg.data = tiltangle;
                 bdrMsg.data = bodyratemag;
+
+                pitchMsg.data = pitchangle;
+                rollMsg.data = rollangle;
                 visualizer.speedPub.publish(speedMsg);
                 visualizer.thrPub.publish(thrMsg);
                 visualizer.tiltPub.publish(tiltMsg);
-                visualizer.bdrPub.publish(bdrMsg);
+                visualizer.pitchPub.publish(pitchMsg);
+                visualizer.rollPub.publish(rollMsg);
 
+                visualizer.bdrPub.publish(bdrMsg);
                 visualizer.visualizeSphere(traj.getPos(delta),
                                            config.dilateRadius);
             }

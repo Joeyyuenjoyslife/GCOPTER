@@ -40,6 +40,12 @@ public:
     ros::Publisher tiltPub;
     ros::Publisher bdrPub;
 
+    //Joeyyu: pub the exact pitch and roll angle in Z-Y-X order
+
+    ros::Publisher pitchPub;
+    ros::Publisher rollPub;
+
+
 public:
     Visualizer(ros::NodeHandle &nh_)
         : nh(nh_)
@@ -54,6 +60,11 @@ public:
         thrPub = nh.advertise<std_msgs::Float64>("/visualizer/total_thrust", 1000);
         tiltPub = nh.advertise<std_msgs::Float64>("/visualizer/tilt_angle", 1000);
         bdrPub = nh.advertise<std_msgs::Float64>("/visualizer/body_rate", 1000);
+
+    //Joeyyu:pub the exact pitch and roll angle in Z-Y-X order
+
+        pitchPub = nh.advertise<std_msgs::Float64>("/visualizer/pitch_angle",1000);
+        rollPub = nh.advertise<std_msgs::Float64>("/visualizer/roll_angle",1000);
     }
 
     // Visualize the trajectory and its front-end path
