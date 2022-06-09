@@ -22,6 +22,7 @@
 
 struct Config
 {
+    std::string meshResource;
     std::string mapTopic;
     std::string targetTopic;
     double dilateRadius;
@@ -45,9 +46,11 @@ struct Config
     double smoothingEps;
     int integralIntervs;
     double relCostTol;
+    double meshScale;
 
     Config(const ros::NodeHandle &nh_priv)
     {
+        nh_priv.getParam("MeshResource", meshResource);
         nh_priv.getParam("MapTopic", mapTopic);
         nh_priv.getParam("TargetTopic", targetTopic);
         nh_priv.getParam("DilateRadius", dilateRadius);
@@ -71,6 +74,7 @@ struct Config
         nh_priv.getParam("SmoothingEps", smoothingEps);
         nh_priv.getParam("IntegralIntervs", integralIntervs);
         nh_priv.getParam("RelCostTol", relCostTol);
+        nh_priv.getParam("MeshScale", meshScale);
     }
 };
 
@@ -289,16 +293,43 @@ public:
                                 0.0, 0.0,
                                 thr, quat, omg);
                 double speed = traj.getVel(delta).norm();
+                
+                //Joeyyu: calculate the yaw angle------------------------------------------------------------------------
+                Eigen::Vector3d vel = traj.getVel(delta);
+                Eigen::Vector3d vel_xy(vel(0),vel(1),0);
+                vel_xy.normalize();
+                //std::cout << "vel_xy " << " " << vel_xy.transpose() << std::endl;
+                Eigen::Quaterniond q = Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(),vel_xy);
+
+                
+                //q.FromTwoVectors(Eigen::Vector3d::UnitX(),vel_xy);
+                q.normalize();
+                //std::cout<<" q: " << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w()<<std::endl;
+                Eigen::Quaterniond q0(quat(0),quat(1),quat(2),quat(3));
+                //std::cout<<" q0: " << " " << q0.x() <<  q0.y() << q0.z() << q0.w()<<std::endl;
+
+                if(fabs(vel(0)) > 0.01 || fabs(vel(1))> 0.01 )
+                {
+                    q0 = q0 * q;
+                    quat = Eigen::Vector4d(q0.w(),q0.x(),q0.y(),q0.z());
+                    //std::cout<<" quat: " << " " << quat.transpose()<<std::endl;
+                }
+                
+
+                
+
+
                 double bodyratemag = omg.norm();
                 double tiltangle = acos(1.0 - 2.0 * (quat(1) * quat(1) + quat(2) * quat(2)));
                 //Joeyyu: add the pitch and roll angle
                 double pitchangle = asin(2.0*(quat(0)*quat(2)-quat(3)*quat(1)));
-                double rollangle = atan2(2.0*(quat(0)*quat(3)+quat(1)*quat(2)),1-2.0*(quat(2)*quat(2)+quat(3)*quat(3)));
+                double rollangle = atan2(2.0*(quat(0)*quat(1)+quat(2)*quat(3)),1-2.0*(quat(1)*quat(1)+quat(2)*quat(2)));
+                double yawangle = atan2(2.0*(quat(0)*quat(3)+quat(1)*quat(2)),1-2.0*(quat(2)*quat(2)+quat(3)*quat(3)));
                 //double tilt_from_pr = acos(cos(pitchangle)*cos(rollangle));
                 //std::cout<<"[Global_planning]:" << " " << "tilt 1:" << " " << tiltangle  
                 //<< " " <<" tilt 1:" <<" " << tilt_from_pr <<std::endl;
                 //std::cout<<"[Global_planning]:" << " " << "tilt angle:" << " " << tiltangle/3.14 * 180.0 << std::endl;
-                std::cout<<"[Global_planning]:" << " " << "pitch angle:" << " " << pitchangle/3.14 * 180.0 << std::endl;
+                //std::cout<<"[Global_planning]:" << " " << "pitch angle:" << " " << pitchangle/3.14 * 180.0 << std::endl;
                 //std::cout<<"[Global_planning]:" << " " << "roll angle:" << " " << rollangle/3.14 * 180.0 << std::endl;
                 std_msgs::Float64 speedMsg, thrMsg, tiltMsg, bdrMsg;
                 //Joeyyu: add pitch and roll Msg;
@@ -324,7 +355,7 @@ public:
 
                 Eigen::Quaterniond q_fov(quat(0),quat(1),quat(2),quat(3));
                 visualizer.pub_fov_visual(traj.getPos(delta),q_fov);
-                visualizer.pub_mesh_drone(traj.getPos(delta),quat);
+                visualizer.pub_mesh_drone(traj.getPos(delta),quat, config.meshScale, config.meshResource);
             }
         }
     }

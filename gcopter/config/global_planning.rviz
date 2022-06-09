@@ -125,49 +125,49 @@ Visualization Manager:
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /visualizer/waypoints
-      Name: Marker
+      Name: waypoints
       Namespaces:
-        {}
+        waypoints: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /visualizer/route
-      Name: Marker
+      Name: route
       Namespaces:
-        {}
+        route: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /visualizer/mesh
-      Name: Marker
+      Name: mesh
       Namespaces:
-        {}
+        mesh: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /visualizer/edge
-      Name: Marker
+      Name: edge
       Namespaces:
-        {}
+        edge: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /visualizer/spheres
-      Name: Marker
+      Name: start_goal
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /visualizer/trajectory
-      Name: Marker
+      Name: trajectory
       Namespaces:
-        {}
+        trajectory: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -175,7 +175,7 @@ Visualization Manager:
       Marker Topic: /visualizer/mesh_drone
       Name: robot
       Namespaces:
-        {}
+        mesh: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -183,7 +183,8 @@ Visualization Manager:
       Marker Topic: /visualizer/fov_visual
       Name: fov_model
       Namespaces:
-        {}
+        fov_edges: true
+        fov_nodes: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -214,7 +215,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 62.165191650390625
+      Distance: 0.5827710032463074
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -222,17 +223,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -2.1948978900909424
-        Y: 10.723564147949219
-        Z: 1.8768043518066406
+        X: -16.178964614868164
+        Y: 7.757855415344238
+        Z: 26.63947105407715
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.4197965860366821
+      Pitch: 0.5497981309890747
       Target Frame: drone1
-      Yaw: 3.126668691635132
+      Yaw: 3.176666021347046
     Saved:
       - Class: rviz/ThirdPersonFollower
         Distance: 4.048277378082275

@@ -456,13 +456,13 @@ namespace gcopter
                     //Joeyyu: add pitch cost and gradient
                     if (smoothedL1(violaPitch, smoothFactor, violaPitchPena, violaPitchPenaD))
                     {
-                        std::cout<<"[Gcopter]:" << " " << "weihtPitch:" << " " << weightPitch<< std::endl;
-                        std::cout<<"[Gcopter]:" << " " << "violaPitchPenaD:" << " " << violaPitchPenaD<< std::endl;
+                        //std::cout<<"[Gcopter]:" << " " << "weihtPitch:" << " " << weightPitch<< std::endl;
+                        //std::cout<<"[Gcopter]:" << " " << "violaPitchPenaD:" << " " << violaPitchPenaD<< std::endl;
                         gradQuat += weightPitch * violaPitchPenaD * 2.0 * pitch / 
                                     sqrt(1.0 - sin_pitch * sin_pitch) * 2.0 * 
                                     Eigen::Vector4d(quat(2), -quat(3), quat(0), -quat(1));
                         pena += weightPitch * violaPitchPena;
-                        std::cout<<"[Gcopter]:" << " " << "gradQuat:" << " " << gradQuat.transpose()<< std::endl;
+                        //std::cout<<"[Gcopter]:" << " " << "gradQuat:" << " " << gradQuat.transpose()<< std::endl;
                     }
 
                     if (smoothedL1(violaThrust, smoothFactor, violaThrustPena, violaThrustPenaD))

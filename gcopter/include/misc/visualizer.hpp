@@ -59,7 +59,8 @@ public:
 
     //Joeyyu: FSC250 visualization
     visualization_msgs::Marker meshROS;
-    std::string mesh_resource = std::string("package://gcopter/meshes/f250.dae");
+    //std::string mesh_resource = std::string("package://gcopter/meshes/swarm_drone.dae");
+    double mesh_scale, relCostTol;
 
 
 
@@ -67,6 +68,8 @@ public:
     Visualizer(ros::NodeHandle &nh_)
         : nh(nh_)
     {
+        
+
         routePub = nh.advertise<visualization_msgs::Marker>("/visualizer/route", 10);
         wayPointsPub = nh.advertise<visualization_msgs::Marker>("/visualizer/waypoints", 10);
         trajectoryPub = nh.advertise<visualization_msgs::Marker>("/visualizer/trajectory", 10);
@@ -310,9 +313,9 @@ public:
         fovPub.publish(markerArray_fov);
     }
 
-    inline void pub_mesh_drone(const Eigen::Vector3d& pose, Eigen::Vector4d& q)
+    inline void pub_mesh_drone(const Eigen::Vector3d& pose, Eigen::Vector4d& q, double scale, std::string mesh_resource)
     {
-        double scale = 1.0;
+        
         meshROS.header.frame_id = "odom";
         meshROS.header.stamp = ros::Time::now();
         meshROS.ns = "mesh";
