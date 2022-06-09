@@ -16,6 +16,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <string.h>
 
 // Visualizer for the planner
 class Visualizer
@@ -44,6 +45,22 @@ public:
 
     ros::Publisher pitchPub;
     ros::Publisher rollPub;
+    ros::Publisher fovPub;
+    ros::Publisher dronePub;
+
+    //Joeyyu: Fov visuailize
+    double max_dis_ = 4.0;
+    double x_max_dis_gain_ = 0.64;
+    double y_max_dis_gain_ = 0.82;
+    visualization_msgs::Marker markerNode_fov;
+    visualization_msgs::Marker markerEdge_fov;
+    visualization_msgs::Marker marker_line, fast_marker_line;
+    std::vector<Eigen::Vector3d> fov_node;
+
+    //Joeyyu: FSC250 visualization
+    visualization_msgs::Marker meshROS;
+    std::string mesh_resource = std::string("package://gcopter/meshes/f250.dae");
+
 
 
 public:
@@ -60,11 +77,17 @@ public:
         thrPub = nh.advertise<std_msgs::Float64>("/visualizer/total_thrust", 1000);
         tiltPub = nh.advertise<std_msgs::Float64>("/visualizer/tilt_angle", 1000);
         bdrPub = nh.advertise<std_msgs::Float64>("/visualizer/body_rate", 1000);
+        dronePub = nh.advertise<visualization_msgs::Marker>("visualizer/mesh_drone",100);
+
 
     //Joeyyu:pub the exact pitch and roll angle in Z-Y-X order
 
         pitchPub = nh.advertise<std_msgs::Float64>("/visualizer/pitch_angle",1000);
         rollPub = nh.advertise<std_msgs::Float64>("/visualizer/roll_angle",1000);
+        fovPub = nh.advertise<visualization_msgs::MarkerArray>("/visualizer/fov_visual", 5);
+
+    //Joeyyu: fov 
+        fov_visual_init("odom");
     }
 
     // Visualize the trajectory and its front-end path
@@ -172,6 +195,158 @@ public:
         }
     }
 
+    //Joeyyu: fov visualization
+    inline void fov_visual_init(std::string msg_frame_id) 
+    {
+        double x_max_dis = max_dis_ * x_max_dis_gain_;
+        double y_max_dis = max_dis_ * y_max_dis_gain_;
+
+        fov_node.resize(5);
+        fov_node[0][0] = 0;
+        fov_node[0][1] = 0;
+        fov_node[0][2] = 0;
+
+        fov_node[1][2] = x_max_dis;
+        fov_node[1][1] = y_max_dis;
+        fov_node[1][0] = max_dis_;
+
+        fov_node[2][2] = x_max_dis;
+        fov_node[2][1] = -y_max_dis;
+        fov_node[2][0] = max_dis_;
+
+        fov_node[3][2] = -x_max_dis;
+        fov_node[3][1] = -y_max_dis;
+        fov_node[3][0] = max_dis_;
+
+        fov_node[4][2] = -x_max_dis;
+        fov_node[4][1] = y_max_dis;
+        fov_node[4][0] = max_dis_;
+
+        markerNode_fov.header.frame_id = msg_frame_id;
+        // markerNode_fov.header.stamp = msg_time;
+        markerNode_fov.action = visualization_msgs::Marker::ADD;
+        markerNode_fov.type = visualization_msgs::Marker::SPHERE_LIST;
+        markerNode_fov.ns = "fov_nodes";
+        // markerNode_fov.id = 0;
+        markerNode_fov.pose.orientation.w = 1;
+        markerNode_fov.scale.x = 0.05;
+        markerNode_fov.scale.y = 0.05;
+        markerNode_fov.scale.z = 0.05;
+        markerNode_fov.color.r = 0;
+        markerNode_fov.color.g = 0.8;
+        markerNode_fov.color.b = 1;
+        markerNode_fov.color.a = 1;
+
+        markerEdge_fov.header.frame_id = msg_frame_id;
+        // markerEdge_fov.header.stamp = msg_time;
+        markerEdge_fov.action = visualization_msgs::Marker::ADD;
+        markerEdge_fov.type = visualization_msgs::Marker::LINE_LIST;
+        markerEdge_fov.ns = "fov_edges";
+        // markerEdge_fov.id = 0;
+        markerEdge_fov.pose.orientation.w = 1;
+        markerEdge_fov.scale.x = 0.05;
+        markerEdge_fov.color.r = 0.5f;
+        markerEdge_fov.color.g = 0.0;
+        markerEdge_fov.color.b = 0.0;
+        markerEdge_fov.color.a = 1;
+    }
+
+    inline void pub_fov_visual(const Eigen::Vector3d& p, Eigen::Quaterniond& q) 
+    {
+        visualization_msgs::Marker clear_previous_msg;
+        clear_previous_msg.action = visualization_msgs::Marker::DELETEALL;
+
+        visualization_msgs::MarkerArray markerArray_fov;
+        markerNode_fov.points.clear();
+        markerEdge_fov.points.clear();
+
+        std::vector<geometry_msgs::Point> fov_node_marker;
+        for (int i = 0; i < (int)fov_node.size(); i++) {
+            Eigen::Vector3d vector_temp;
+            vector_temp = q * fov_node[i] + p;
+            geometry_msgs::Point point_temp;
+            point_temp.x = vector_temp[0];
+            point_temp.y = vector_temp[1];
+            point_temp.z = vector_temp[2];
+            fov_node_marker.push_back(point_temp);
+        }
+
+        markerNode_fov.points.push_back(fov_node_marker[0]);
+        markerNode_fov.points.push_back(fov_node_marker[1]);
+        markerNode_fov.points.push_back(fov_node_marker[2]);
+        markerNode_fov.points.push_back(fov_node_marker[3]);
+        markerNode_fov.points.push_back(fov_node_marker[4]);
+
+        markerEdge_fov.points.push_back(fov_node_marker[0]);
+        markerEdge_fov.points.push_back(fov_node_marker[1]);
+
+        markerEdge_fov.points.push_back(fov_node_marker[0]);
+        markerEdge_fov.points.push_back(fov_node_marker[2]);
+
+        markerEdge_fov.points.push_back(fov_node_marker[0]);
+        markerEdge_fov.points.push_back(fov_node_marker[3]);
+
+        markerEdge_fov.points.push_back(fov_node_marker[0]);
+        markerEdge_fov.points.push_back(fov_node_marker[4]);
+
+        markerEdge_fov.points.push_back(fov_node_marker[0]);
+        markerEdge_fov.points.push_back(fov_node_marker[1]);
+
+        markerEdge_fov.points.push_back(fov_node_marker[1]);
+        markerEdge_fov.points.push_back(fov_node_marker[2]);
+
+        markerEdge_fov.points.push_back(fov_node_marker[2]);
+        markerEdge_fov.points.push_back(fov_node_marker[3]);
+
+        markerEdge_fov.points.push_back(fov_node_marker[3]);
+        markerEdge_fov.points.push_back(fov_node_marker[4]);
+
+        markerEdge_fov.points.push_back(fov_node_marker[4]);
+        markerEdge_fov.points.push_back(fov_node_marker[1]);
+
+        markerArray_fov.markers.push_back(clear_previous_msg);
+        markerArray_fov.markers.push_back(markerNode_fov);
+        markerArray_fov.markers.push_back(markerEdge_fov);
+        fovPub.publish(markerArray_fov);
+    }
+
+    inline void pub_mesh_drone(const Eigen::Vector3d& pose, Eigen::Vector4d& q)
+    {
+        double scale = 1.0;
+        meshROS.header.frame_id = "odom";
+        meshROS.header.stamp = ros::Time::now();
+        meshROS.ns = "mesh";
+        meshROS.id = 0;
+        meshROS.type = visualization_msgs::Marker::MESH_RESOURCE;
+        meshROS.action = visualization_msgs::Marker::ADD;
+        meshROS.mesh_use_embedded_materials = true;
+
+        meshROS.pose.position.x = pose(0);
+        meshROS.pose.position.y = pose(1);
+        meshROS.pose.position.z = pose(2);
+
+        meshROS.pose.orientation.w = q(0);
+        meshROS.pose.orientation.x = q(1);
+        meshROS.pose.orientation.y = q(2);
+        meshROS.pose.orientation.z = q(3);
+        meshROS.scale.x = scale;
+        meshROS.scale.y = scale;
+        meshROS.scale.z = scale;
+
+        meshROS.color.a = 0;
+        meshROS.color.r = 0;
+        meshROS.color.g = 0;
+        meshROS.color.b = 0;
+        meshROS.mesh_resource = mesh_resource;
+        dronePub.publish(meshROS);
+
+
+
+
+    }
+
+
+
     // Visualize some polytopes in H-representation
     inline void visualizePolytope(const std::vector<Eigen::MatrixX4d> &hPolys)
     {
@@ -260,6 +435,10 @@ public:
 
         return;
     }
+
+    //Joeyyu: visualize the FOV
+
+
 
     // Visualize all spheres with centers sphs and the same radius
     inline void visualizeSphere(const Eigen::Vector3d &center,

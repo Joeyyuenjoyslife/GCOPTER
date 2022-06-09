@@ -321,6 +321,10 @@ public:
                 visualizer.bdrPub.publish(bdrMsg);
                 visualizer.visualizeSphere(traj.getPos(delta),
                                            config.dilateRadius);
+
+                Eigen::Quaterniond q_fov(quat(0),quat(1),quat(2),quat(3));
+                visualizer.pub_fov_visual(traj.getPos(delta),q_fov);
+                visualizer.pub_mesh_drone(traj.getPos(delta),quat);
             }
         }
     }
