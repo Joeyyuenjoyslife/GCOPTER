@@ -12,17 +12,17 @@ MapBound:                   [-25.0, 25.0, -25.0, 25.0, 0.0, 5.0]
 
 TimeoutRRT:                 0.02
 
-MaxVelMag:                  8.0
+MaxVelMag:                  12.0
 
-MaxBdrMag:                  2.1
+MaxBdrMag:                  3.1 
 
-MaxTiltAngle:               1.05
+MaxTiltAngle:               1.56
 
-MaxPitch:                   1.05
+MaxPitch:                   1.56
 
 MinThrust:                  2.0
 
-MaxThrust:                  12.0
+MaxThrust:                  18.0
 
 VehicleMass:                0.61
 

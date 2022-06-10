@@ -34,6 +34,7 @@ private:
     ros::Publisher meshPub;
     ros::Publisher edgePub;
     ros::Publisher spherePub;
+    ros::Publisher vistrajPub;
 
 public:
     ros::Publisher speedPub;
@@ -50,8 +51,10 @@ public:
 
     //Joeyyu: Fov visuailize
     double max_dis_ = 4.0;
-    double x_max_dis_gain_ = 0.64;
-    double y_max_dis_gain_ = 0.82;
+    // double x_max_dis_gain_ = 0.64;
+    // double y_max_dis_gain_ = 0.82;
+    double x_max_dis_gain_ = 0.60;
+    double y_max_dis_gain_ = 0.60;
     visualization_msgs::Marker markerNode_fov;
     visualization_msgs::Marker markerEdge_fov;
     visualization_msgs::Marker marker_line, fast_marker_line;
@@ -73,6 +76,7 @@ public:
         routePub = nh.advertise<visualization_msgs::Marker>("/visualizer/route", 10);
         wayPointsPub = nh.advertise<visualization_msgs::Marker>("/visualizer/waypoints", 10);
         trajectoryPub = nh.advertise<visualization_msgs::Marker>("/visualizer/trajectory", 10);
+        vistrajPub = nh.advertise<visualization_msgs::Marker>("/visualizer/vistraj", 10);
         meshPub = nh.advertise<visualization_msgs::Marker>("/visualizer/mesh", 1000);
         edgePub = nh.advertise<visualization_msgs::Marker>("/visualizer/edge", 1000);
         spherePub = nh.advertise<visualization_msgs::Marker>("/visualizer/spheres", 1000);
@@ -89,9 +93,69 @@ public:
         rollPub = nh.advertise<std_msgs::Float64>("/visualizer/roll_angle",1000);
         fovPub = nh.advertise<visualization_msgs::MarkerArray>("/visualizer/fov_visual", 5);
 
-    //Joeyyu: fov 
+    //Joeyyu: fov initialization
         fov_visual_init("odom");
     }
+
+    //Joeyyu: Visualize the visiable trajectory
+    template <int D>
+    inline void vistraj_pub(const Trajectory<D> &traj, const double &progress_t, const double & delta, const bool & safe)
+    {
+        visualization_msgs::Marker routeMarker, trajMarker, vistrajDeleter;
+
+        routeMarker.id = 0;
+        routeMarker.type = visualization_msgs::Marker::LINE_LIST;
+        routeMarker.header.stamp = ros::Time::now();
+        routeMarker.header.frame_id = "odom";
+        routeMarker.pose.orientation.w = 1.00;
+        routeMarker.action = visualization_msgs::Marker::ADD;
+        routeMarker.ns = "route";
+        routeMarker.color.r = 1.00;
+        routeMarker.color.g = 0.00;
+        routeMarker.color.b = 0.00;
+        routeMarker.color.a = 1.00;
+        routeMarker.scale.x = 0.1;
+
+        trajMarker = routeMarker;
+        trajMarker.header.frame_id = "odom";
+        trajMarker.id = 0;
+        trajMarker.ns = "vistraj";
+        trajMarker.color.r = safe? 1.00: 0.00;
+        trajMarker.color.g = 0.00;
+        trajMarker.color.b = 0.00;
+        trajMarker.scale.x = 0.50;
+
+        vistrajDeleter = trajMarker;
+        vistrajDeleter.action = visualization_msgs::Marker::DELETEALL;
+
+        if (traj.getPieceNum() > 0)
+        {
+            double T = 0.01;
+            Eigen::Vector3d lastX = traj.getPos(delta);
+            for (double t = delta+T; t <= progress_t; t += T)
+            {
+                geometry_msgs::Point point;
+                Eigen::Vector3d X = traj.getPos(t);
+                point.x = lastX(0);
+                point.y = lastX(1);
+                point.z = lastX(2);
+                trajMarker.points.push_back(point);
+                point.x = X(0);
+                point.y = X(1);
+                point.z = X(2);
+                trajMarker.points.push_back(point);
+                lastX = X;
+            }
+            vistrajPub.publish(vistrajDeleter);
+            vistrajPub.publish(trajMarker);
+        }
+
+
+
+
+
+
+    } 
 
     // Visualize the trajectory and its front-end path
     template <int D>
@@ -439,7 +503,6 @@ public:
         return;
     }
 
-    //Joeyyu: visualize the FOV
 
 
 
@@ -473,8 +536,8 @@ public:
         point.z = center(2);
         sphereMarkers.points.push_back(point);
 
-        spherePub.publish(sphereDeleter);
-        spherePub.publish(sphereMarkers);
+        //spherePub.publish(sphereDeleter);
+        //spherePub.publish(sphereMarkers);
     }
 
     inline void visualizeStartGoal(const Eigen::Vector3d &center,

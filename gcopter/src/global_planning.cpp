@@ -5,6 +5,7 @@
 #include "gcopter/flatness.hpp"
 #include "gcopter/voxel_map.hpp"
 #include "gcopter/sfc_gen.hpp"
+#include "gcopter/pa_checker.hpp"
 
 #include <ros/ros.h>
 #include <ros/console.h>
@@ -93,6 +94,7 @@ private:
     std::vector<Eigen::Vector3d> startGoal;
 
     Trajectory<5> traj;
+    pa_checker::Pa_checker paChecker;
     double trajStamp;
 
 public:
@@ -101,7 +103,8 @@ public:
         : config(conf),
           nh(nh_),
           mapInitialized(false),
-          visualizer(nh)
+          visualizer(nh),
+          paChecker(0.0, 40.0, 4.0, 4.0, false)
     {
         const Eigen::Vector3i xyz((config.mapBound[1] - config.mapBound[0]) / config.voxelWidth,
                                   (config.mapBound[3] - config.mapBound[2]) / config.voxelWidth,
@@ -210,6 +213,7 @@ public:
                 const int quadratureRes = config.integralIntervs;
 
                 traj.clear();
+                paChecker.clear();
 
                 if (!gcopter.setup(config.weightT,
                                    iniState, finState,
@@ -287,43 +291,49 @@ public:
                 Eigen::Vector4d quat;
                 Eigen::Vector3d omg;
 
+                //Joeyyu: calculate the yaw angle------------------------------------------------------------------------
+                Eigen::Vector3d vel = traj.getVel(delta);
+                Eigen::Vector3d pos = traj.getPos(delta);
+                double Psi = std::atan2(vel(1),vel(0));
+
                 flatmap.forward(traj.getVel(delta),
                                 traj.getAcc(delta),
                                 traj.getJer(delta),
-                                0.0, 0.0,
+                                Psi, 0.0,
                                 thr, quat, omg);
                 double speed = traj.getVel(delta).norm();
                 
                 //Joeyyu: calculate the yaw angle------------------------------------------------------------------------
-                Eigen::Vector3d vel = traj.getVel(delta);
-                Eigen::Vector3d vel_xy(vel(0),vel(1),0);
-                vel_xy.normalize();
-                //std::cout << "vel_xy " << " " << vel_xy.transpose() << std::endl;
-                Eigen::Quaterniond q = Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(),vel_xy);
+                // Eigen::Vector3d vel = traj.getVel(delta);
+                // Eigen::Vector3d vel_xy(vel(0),vel(1),0);
+                
+                // vel_xy.normalize();
+                // //std::cout << "vel_xy " << " " << vel_xy.transpose() << std::endl;
+                // Eigen::Quaterniond q = Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(),vel_xy);
 
                 
-                //q.FromTwoVectors(Eigen::Vector3d::UnitX(),vel_xy);
-                q.normalize();
-                //std::cout<<" q: " << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w()<<std::endl;
-                Eigen::Quaterniond q0(quat(0),quat(1),quat(2),quat(3));
-                //std::cout<<" q0: " << " " << q0.x() <<  q0.y() << q0.z() << q0.w()<<std::endl;
+                // //q.FromTwoVectors(Eigen::Vector3d::UnitX(),vel_xy);
+                // q.normalize();
+                // //std::cout<<" q: " << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w()<<std::endl;
+                // Eigen::Quaterniond q0(quat(0),quat(1),quat(2),quat(3));
+                // //std::cout<<" q0: " << " " << q0.x() <<  q0.y() << q0.z() << q0.w()<<std::endl;
 
-                if(fabs(vel(0)) > 0.01 || fabs(vel(1))> 0.01 )
-                {
-                    q0 = q0 * q;
-                    quat = Eigen::Vector4d(q0.w(),q0.x(),q0.y(),q0.z());
-                    //std::cout<<" quat: " << " " << quat.transpose()<<std::endl;
-                }
+                // if(fabs(vel(0)) > 0.01 || fabs(vel(1))> 0.01 )
+                // {
+                //     q0 = q0 * q;
+                //     quat = Eigen::Vector4d(q0.w(),q0.x(),q0.y(),q0.z());
+                //     //std::cout<<" quat: " << " " << quat.transpose()<<std::endl;
+                // }
                 
 
                 
 
 
                 double bodyratemag = omg.norm();
-                double tiltangle = acos(1.0 - 2.0 * (quat(1) * quat(1) + quat(2) * quat(2)));
+                double tiltangle = acos(1.0 - 2.0 * (quat(1) * quat(1) + quat(2) * quat(2))) / M_PI * 180.0;
                 //Joeyyu: add the pitch and roll angle
-                double pitchangle = asin(2.0*(quat(0)*quat(2)-quat(3)*quat(1)));
-                double rollangle = atan2(2.0*(quat(0)*quat(1)+quat(2)*quat(3)),1-2.0*(quat(1)*quat(1)+quat(2)*quat(2)));
+                double pitchangle = asin(2.0*(quat(0)*quat(2)-quat(3)*quat(1)))/ M_PI * 180.0 ;
+                double rollangle = atan2(2.0*(quat(0)*quat(1)+quat(2)*quat(3)),1-2.0*(quat(1)*quat(1)+quat(2)*quat(2))) /M_PI * 180.0;
                 double yawangle = atan2(2.0*(quat(0)*quat(3)+quat(1)*quat(2)),1-2.0*(quat(2)*quat(2)+quat(3)*quat(3)));
                 //double tilt_from_pr = acos(cos(pitchangle)*cos(rollangle));
                 //std::cout<<"[Global_planning]:" << " " << "tilt 1:" << " " << tiltangle  
@@ -334,7 +344,10 @@ public:
                 std_msgs::Float64 speedMsg, thrMsg, tiltMsg, bdrMsg;
                 //Joeyyu: add pitch and roll Msg;
                 std_msgs::Float64 pitchMsg, rollMsg;
+                
+                paChecker.check(traj, quat, pos, speed, delta);
 
+                //std::cout<<speed << " " << paChecker.getProgress() << " " << paChecker.getSafeFlag() <<std::endl;
 
                 speedMsg.data = speed;
                 thrMsg.data = thr;
@@ -356,6 +369,7 @@ public:
                 Eigen::Quaterniond q_fov(quat(0),quat(1),quat(2),quat(3));
                 visualizer.pub_fov_visual(traj.getPos(delta),q_fov);
                 visualizer.pub_mesh_drone(traj.getPos(delta),quat, config.meshScale, config.meshResource);
+                visualizer.vistraj_pub(traj, paChecker.getProgress(), delta, paChecker.getSafeFlag());
             }
         }
     }
